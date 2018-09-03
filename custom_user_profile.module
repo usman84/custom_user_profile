@@ -4,13 +4,14 @@
 */
 function custom_user_profile_form_alter(&$form, &$form_state, $form_id) {
   if ($form_id == 'user_profile_form') {
-    array_unshift($form['#validate'], '_custom_user_profile_validate');
+    //array_unshift($form['#validate'], '_custom_user_profile_validate');
+    $form['#validate'][] = '_custom_user_profile_validate';
   }
 }
 
 /*
 * Implements _custom_user_profile_validate().
-* Seeting up profile image
+* Setting up profile image
 */
 function _custom_user_profile_validate($form, &$form_state){
   $last_user_gallery = $form_state['values']['field_user_gallery'][LANGUAGE_NONE];
@@ -21,19 +22,40 @@ function _custom_user_profile_validate($form, &$form_state){
   //Get last picture in the last gallery
   $last_image = end($last_user_gallery['field_image'][LANGUAGE_NONE]);
 
-  //Check if image is being uploaded
+  //If file is Not uploaded by AJAX
   if($last_image['fid'] != 0){
     $last_image = file_load($last_image['fid']);
     //Check if profile is already set then replace, otherwise create new in else
     if(isset($form_state['values']['picture'])){
       $profile_image = $form_state['values']['picture'];
-      $profile_image->fid = $last_image->fid;
-      $profile_image->filename = $last_image->filename;
-      $profile_image->uri = $last_image->uri;
-      $profile_image->filemime = $last_image->filemime;
-      $profile_image->filesize = $last_image->filesize;
+      _custom_user_profile_assign($profile_image, $last_image);
     }else{
       $form_state['values']['picture'] = $last_image;
     }
+  }else{
+    //If file is already uploaded by AJAX
+    $second_last = $last_user_gallery['field_image'][LANGUAGE_NONE];
+    $second_last = $second_last[count($second_last)-2];
+    if(isset($second_last)){
+      $second_last = file_load($second_last['fid']);
+      //Check if profile is already set then replace, otherwise create new in else
+      if(isset($form_state['values']['picture'])){
+        $profile_image = $form_state['values']['picture'];
+        _custom_user_profile_assign($profile_image, $second_last);
+      }else{
+        $form_state['values']['picture'] = $second_last;
+      }
+    }
   }
+}
+
+/*
+ * Implements _custom_user_profile_assign().
+*/
+function _custom_user_profile_assign($profile_image, $array){
+  $profile_image->fid = $array->fid;
+  $profile_image->filename = $array->filename;
+  $profile_image->uri = $array->uri;
+  $profile_image->filemime = $array->filemime;
+  $profile_image->filesize = $array->filesize;
 }
